@@ -51,9 +51,11 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.port_number = attributes['portid']
             elif tag == "service":
                 if "http" in attributes['name']:
-                    self.protocol = attributes['name']
+                    self.protocol = "http"
                 elif "ssl" in attributes['name']:
                     self.protocol = "https"
+                elif "vnc" in attributes['name']:
+                    self.protocol = "vnc"
             elif tag == "state":
                 if attributes['state'] == "open":
                     self.port_open = True
@@ -67,10 +69,17 @@ class XML_Parser(xml.sax.ContentHandler):
     def endElement(self, tag):
         if self.masscan:
             if tag == "host":
-                if self.system_name is not None and self.port_number is not None and self.protocol is not None and self.port_open:
-                    built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
-                    if built_url not in self.url_list:
-                        self.url_list.append(built_url)
+                if (self.system_name is not None) and (self.port_number is not None) and self.port_open:
+                    if self.protocol == "http" or self.protocol == "https":
+                        built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
+                        if built_url not in self.url_list:
+                            self.url_list.append(built_url)
+                    elif self.protocol == "vnc":
+                        if self.system_name not in self.vnc_list:
+                            self.vnc_list.append(self.system_name)
+                    elif self.port_number == "3389":
+                        if self.system_name not in self.rdp_list:
+                            self.rdp_list.append(self.system_name)
 
                 self.system_name = None
                 self.port_number = None
@@ -78,7 +87,7 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.port_open = False
             elif tag == "nmaprun":
 
-                return self.url_list
+                return self.url_list, self.rdp_list, self.self.vnc_list
 
     def characters(self, content):
         pass
