@@ -6,12 +6,82 @@ import shutil
 import sys
 import time
 import xml.etree.ElementTree as XMLParser
+import xml.sax
 from distutils.util import strtobool
 import glob
 import socket
 from netaddr import IPAddress
 from netaddr.core import AddrFormatError
 from urlparse import urlparse
+
+
+class XML_Parser(xml.sax.ContentHandler):
+
+    def __init__(self, cli_arguments):
+        self.system_name = None
+        self.port_number = None
+        self.protocol = None
+        self.masscan = False
+        self.nmap = False
+        self.nessus = False
+        self.url_list = []
+        self.port_open = False
+        self.rdp_list = []
+        self.vnc_list = []
+        if cli_arguments.web or cli_arguments.headless:
+            self.user_protocol = "web"
+        elif cli_arguments.rdp:
+            self.user_protocol = "rdp"
+        elif cli_arguments.vnc:
+            self.user_protocol = "vnc"
+
+    def startElement(self, tag, attributes):
+        # Determine the Scanner being used
+        if tag == "nmaprun" and attributes['scanner'] == "masscan":
+            self.masscan = True
+        elif tag == "nmaprun" and attributes['scanner'] == "nmap":
+            self.nmap = True
+        elif tag == "nessusclientdata_v2":
+            self.nessus = True
+
+        if self.masscan:
+            if tag == "address":
+                self.system_name = attributes['addr']
+            elif tag == "port":
+                self.port_number = attributes['portid']
+            elif tag == "service":
+                if "http" in attributes['name']:
+                    self.protocol = attributes['name']
+                elif "ssl" in attributes['name']:
+                    self.protocol = "https"
+            elif tag == "state":
+                if attributes['state'] == "open":
+                    self.port_open = True
+
+        elif self.nmap:
+            pass
+
+        elif self.nessus:
+            pass
+
+    def endElement(self, tag):
+        if self.masscan:
+            if tag == "host":
+                if self.system_name is not None and self.port_number is not None and self.protocol is not None and self.port_open:
+                    built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
+                    if built_url not in self.url_list:
+                        self.url_list.append(built_url)
+
+                self.system_name = None
+                self.port_number = None
+                self.protocol = None
+                self.port_open = False
+            elif tag == "nmaprun":
+
+                return self.url_list
+
+    def characters(self, content):
+        pass
 
 
 def resolve_host(system):
