@@ -17,7 +17,7 @@ from urlparse import urlparse
 
 class XML_Parser(xml.sax.ContentHandler):
 
-    def __init__(self, cli_arguments):
+    def __init__(self):
         self.system_name = None
         self.port_number = None
         self.protocol = None
@@ -28,12 +28,9 @@ class XML_Parser(xml.sax.ContentHandler):
         self.port_open = False
         self.rdp_list = []
         self.vnc_list = []
-        if cli_arguments.web or cli_arguments.headless:
-            self.user_protocol = "web"
-        elif cli_arguments.rdp:
-            self.user_protocol = "rdp"
-        elif cli_arguments.vnc:
-            self.user_protocol = "vnc"
+        self.http_ports = ['80', '8080']
+        self.https_ports = ['443', '8443']
+        self.num_urls = 0
 
     def startElement(self, tag, attributes):
         # Determine the Scanner being used
@@ -44,7 +41,7 @@ class XML_Parser(xml.sax.ContentHandler):
         elif tag == "nessusclientdata_v2":
             self.nessus = True
 
-        if self.masscan:
+        if self.masscan or self.nmap:
             if tag == "address":
                 self.system_name = attributes['addr']
             elif tag == "port":
@@ -60,20 +57,28 @@ class XML_Parser(xml.sax.ContentHandler):
                 if attributes['state'] == "open":
                     self.port_open = True
 
-        elif self.nmap:
-            pass
-
         elif self.nessus:
             pass
 
     def endElement(self, tag):
-        if self.masscan:
+        if self.masscan or self.nmap:
             if tag == "host":
                 if (self.system_name is not None) and (self.port_number is not None) and self.port_open:
                     if self.protocol == "http" or self.protocol == "https":
                         built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
                         if built_url not in self.url_list:
                             self.url_list.append(built_url)
+                            self.num_urls += 1
+                    elif self.protocol is None and self.port_number in self.http_ports:
+                        built_url = "http://" + self.system_name + ":" + self.port_number
+                        if built_url not in self.url_list:
+                            self.url_list.append(built_url)
+                            self.num_urls += 1
+                    elif self.protocol is None and self.port_number in self.https_ports:
+                        built_url = "https://" + self.system_name + ":" + self.port_number
+                        if built_url not in self.url_list:
+                            self.url_list.append(built_url)
+                            self.num_urls += 1
                     elif self.protocol == "vnc":
                         if self.system_name not in self.vnc_list:
                             self.vnc_list.append(self.system_name)
@@ -87,7 +92,11 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.port_open = False
             elif tag == "nmaprun":
 
-                return self.url_list, self.rdp_list, self.self.vnc_list
+                return self.url_list, self.rdp_list, self.vnc_list
+
+            elif tag == "nmaprun":
+
+                return self.url_list, self.rdp_list, self.vnc_list
 
     def characters(self, content):
         pass
@@ -200,6 +209,8 @@ def target_creator(command_line_object):
                                                            port)
                                 if urlBuild not in urls:
                                     urls.append(urlBuild)
+                                    with open('visshere.txt', 'a') as poop:
+                                        poop.write(urlBuild)
                                     num_urls += 1
                                 else:
                                     check_ip_address = True
