@@ -38,7 +38,7 @@ class XML_Parser(xml.sax.ContentHandler):
             self.masscan = True
         elif tag == "nmaprun" and attributes['scanner'] == "nmap":
             self.nmap = True
-        elif tag == "nessusclientdata_v2":
+        elif tag == "NessusClientData_v2":
             self.nessus = True
 
         if self.masscan or self.nmap:
@@ -90,16 +90,19 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.port_number = None
                 self.protocol = None
                 self.port_open = False
-            elif tag == "nmaprun":
 
+            elif tag == "nmaprun":
                 return self.url_list, self.rdp_list, self.vnc_list
 
-            elif tag == "nmaprun":
+        elif self.nessus:
+            if tag == "ReportHost":
+                pass
 
+            elif tag == "NessusClientData_v2":
                 return self.url_list, self.rdp_list, self.vnc_list
 
     def characters(self, content):
-        pass
+        print content
 
 
 def resolve_host(system):
