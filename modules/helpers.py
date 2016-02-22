@@ -31,6 +31,8 @@ class XML_Parser(xml.sax.ContentHandler):
         self.http_ports = ['80', '8080']
         self.https_ports = ['443', '8443']
         self.num_urls = 0
+        self.get_fqdn = False
+        self.get_ip = False
 
     def startElement(self, tag, attributes):
         # Determine the Scanner being used
@@ -58,7 +60,19 @@ class XML_Parser(xml.sax.ContentHandler):
                     self.port_open = True
 
         elif self.nessus:
-            pass
+            if tag == "tag":
+                if 'name' in attributes:
+                    if attributes['name'] == "host-fqdn":
+                        self.get_fqdn = True
+                    elif attributes['name'] == "host-ip":
+                        self.get_ip = True
+            elif tag == "ReportItem":
+                if 'svc_name' in attributes:
+                    service_name = attributes['svc_name']
+                    if service_name == "www" or service_name == "http?":
+                        self.protocol = "http"
+                    elif service_name == 'https?':
+                        self.protocol = "https"
 
     def endElement(self, tag):
         if self.masscan or self.nmap:
@@ -96,13 +110,21 @@ class XML_Parser(xml.sax.ContentHandler):
 
         elif self.nessus:
             if tag == "ReportHost":
-                pass
+                self.system_name = None
+                self.port_number = None
+                self.protocol = None
+                self.port_open = False
 
             elif tag == "NessusClientData_v2":
                 return self.url_list, self.rdp_list, self.vnc_list
 
     def characters(self, content):
-        print content
+        if self.get_ip:
+            self.system_name = content
+
+        elif self.get_fqdn:
+            if content != "":
+                self.system_name = content
 
 
 def resolve_host(system):
