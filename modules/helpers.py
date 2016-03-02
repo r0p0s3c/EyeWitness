@@ -55,6 +55,8 @@ class XML_Parser(xml.sax.ContentHandler):
                     self.protocol = "https"
                 elif "vnc" in attributes['name']:
                     self.protocol = "vnc"
+                elif "ms-wbt-server" in attributes['name']:
+                    self.protocol = "rdp"
             elif tag == "state":
                 if attributes['state'] == "open":
                     self.port_open = True
@@ -73,6 +75,17 @@ class XML_Parser(xml.sax.ContentHandler):
                         self.protocol = "http"
                     elif service_name == 'https?':
                         self.protocol = "https"
+                    elif service_name == "msrdp":
+                        self.protocol = "rdp"
+                    elif service_name == "vnc":
+                        self.protocol = "vnc"
+                elif "port" in attributes:
+                    if attributes['port'] == "3389":
+                        self.protocol == "rdp"
+                    elif attributes['port'] == "5900":
+                        self.protocol == "vnc"
+                    else:
+                        self.port_number == attributes['port']
 
     def endElement(self, tag):
         if self.masscan or self.nmap:
@@ -110,6 +123,18 @@ class XML_Parser(xml.sax.ContentHandler):
 
         elif self.nessus:
             if tag == "ReportHost":
+                if (self.system_name is not None) and (self.protocol is not None):
+                    if self.protocol == "http" or self.protocol == "https":
+                        built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
+                        if built_url not in self.url_list:
+                            self.url_list.append(built_url)
+                    elif self.protocol == "vnc":
+                        if self.system_name not in self.vnc_list:
+                            self.vnc_list.append(self.system_name)
+                    elif self.protocol == "rdp":
+                        if self.system_name not in self.rdp_list:
+                            self.rdp_list.append(self.system_name)
+
                 self.system_name = None
                 self.port_number = None
                 self.protocol = None
