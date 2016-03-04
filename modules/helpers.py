@@ -145,15 +145,18 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.system_name = None
 
             elif tag == "NessusClientData_v2":
-                with open('temp_webfiles.txt') as temp_web:
-                    for url in self.url_list:
-                        temp_web.write(url)
-                with open('temp_rdpfiles.txt') as temp_rdp:
-                    for url in self.rdp_list:
-                        temp_rdp.write(url)
-                with open('temp_vnclist.txt') as temp_vnc:
-                    for url in self.vnc_list:
-                        temp_vnc.write(url)
+                if len(self.url_list) > 0:
+                    with open('temp_weblist.txt', 'w') as temp_web:
+                        for url in self.url_list:
+                            temp_web.write(url + '\n')
+                if len(self.rdp_list) > 0:
+                    with open('temp_rdplist.txt', 'w') as temp_rdp:
+                        for url in self.rdp_list:
+                            temp_rdp.write(url + '\n')
+                if len(self.vnc_list) > 0:
+                    with open('temp_vnclist.txt', 'w') as temp_vnc:
+                        for url in self.vnc_list:
+                            temp_vnc.write(url + '\n')
 
     def characters(self, content):
         return
@@ -226,6 +229,30 @@ def target_creator(command_line_object):
         parser.setContentHandler(Handler)
 
         parser.parse(command_line_object.f)
+
+        # Check for urls
+        if os.path.isfile('temp_weblist.txt'):
+            with open('temp_weblist.txt', 'r') as final_urls:
+                all_urls = final_urls.readlines()
+            for site in all_urls:
+                urls.append(site.strip())
+            os.remove('temp_weblist.txt')
+
+        # Check for urls
+        if os.path.isfile('temp_rdplist.txt'):
+            with open('temp_rdplist.txt', 'r') as final_rdp:
+                all_rdp = final_rdp.readlines()
+            for rdp_ip in all_rdp:
+                rdp.append(rdp_ip.strip())
+            os.remove('temp_rdplist.txt')
+
+        # Check for urls
+        if os.path.isfile('temp_vnclist.txt'):
+            with open('temp_vnclist.txt', 'r') as final_vnc:
+                all_vnc = final_vnc.readlines()
+            for vnc_ip in all_vnc:
+                vnc.append(vnc_ip.strip())
+            os.remove('temp_vnclist.txt')
 
         return urls, rdp, vnc
 
