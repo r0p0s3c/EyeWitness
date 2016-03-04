@@ -33,6 +33,7 @@ class XML_Parser(xml.sax.ContentHandler):
         self.num_urls = 0
         self.get_fqdn = False
         self.get_ip = False
+        self.service_detection = False
 
     def startElement(self, tag, attributes):
         # Determine the Scanner being used
@@ -67,17 +68,9 @@ class XML_Parser(xml.sax.ContentHandler):
                     self.system_name = attributes['name']
 
             elif tag == "ReportItem":
-                if "port" in attributes:
-                    if attributes['port'] in "3389":
-                        self.protocol == "rdp"
-                        self.port_number = '3389'
-                    elif attributes['port'] == "5900":
-                        self.protocol == "vnc"
-                        self.port_number = '5900'
-                    else:
-                        self.port_number = attributes['port']
+                if "port" in attributes and "svc_name" in attributes and "pluginName" in attributes:
+                    self.port_number = attributes['port']
 
-                if 'svc_name' in attributes:
                     service_name = attributes['svc_name']
                     if service_name == 'https?' or self.port_number in self.https_ports:
                         self.protocol = "https"
@@ -87,6 +80,8 @@ class XML_Parser(xml.sax.ContentHandler):
                         self.protocol = "rdp"
                     elif service_name == "vnc":
                         self.protocol = "vnc"
+
+                    self.service_detection = True
         return
 
     def endElement(self, tag):
@@ -125,7 +120,7 @@ class XML_Parser(xml.sax.ContentHandler):
 
         elif self.nessus:
             if tag == "ReportItem":
-                if (self.system_name is not None) and (self.protocol is not None):
+                if (self.system_name is not None) and (self.protocol is not None) and self.service_detection:
                     if self.protocol == "http" or self.protocol == "https":
                         built_url = self.protocol + "://" + self.system_name + ":" + self.port_number
                         if built_url not in self.url_list:
@@ -140,6 +135,7 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.port_number = None
                 self.protocol = None
                 self.port_open = False
+                self.service_detection = False
 
             elif tag == "ReportHost":
                 self.system_name = None
