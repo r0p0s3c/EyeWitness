@@ -79,14 +79,15 @@ class XML_Parser(xml.sax.ContentHandler):
 
                 if 'svc_name' in attributes:
                     service_name = attributes['svc_name']
-                    if service_name == "www" or service_name == "http?":
-                        self.protocol = "http"
-                    elif service_name == 'https?':
+                    if service_name == 'https?' or self.port_number in self.https_ports:
                         self.protocol = "https"
+                    elif service_name == "www" or service_name == "http?":
+                        self.protocol = "http"
                     elif service_name == "msrdp":
                         self.protocol = "rdp"
                     elif service_name == "vnc":
                         self.protocol = "vnc"
+        return
 
     def endElement(self, tag):
         if self.masscan or self.nmap:
@@ -144,10 +145,18 @@ class XML_Parser(xml.sax.ContentHandler):
                 self.system_name = None
 
             elif tag == "NessusClientData_v2":
-                return self.url_list, self.rdp_list, self.vnc_list
+                with open('temp_webfiles.txt') as temp_web:
+                    for url in self.url_list:
+                        temp_web.write(url)
+                with open('temp_rdpfiles.txt') as temp_rdp:
+                    for url in self.rdp_list:
+                        temp_rdp.write(url)
+                with open('temp_vnclist.txt') as temp_vnc:
+                    for url in self.vnc_list:
+                        temp_vnc.write(url)
 
     def characters(self, content):
-        pass
+        return
 
 
 def resolve_host(system):
@@ -216,7 +225,7 @@ def target_creator(command_line_object):
         Handler = XML_Parser()
         parser.setContentHandler(Handler)
 
-        urls, rdp, vnc = parser.parse(command_line_object.f)
+        parser.parse(command_line_object.f)
 
         return urls, rdp, vnc
 
