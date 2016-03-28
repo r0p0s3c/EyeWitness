@@ -28,6 +28,7 @@ class HTTPTableObject(object):
         self._ssl_error = False
         self._ua_left = None
         self._resolved = None
+        self._active_scan = False
 
     def set_paths(self, outdir, suffix=None):
         file_name = self.remote_system.replace('://', '.')
